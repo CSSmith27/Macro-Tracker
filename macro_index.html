@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Daily Macro Tracker</title>
+
+  <!-- Manifest (Data URI) for PWA install -->
+  <link rel="manifest" href='data:application/json,{
+    "short_name": "Macros",
+    "name": "Daily Macro Tracker",
+    "icons": [
+      {
+        "src": "https://via.placeholder.com/192.png?text=Icon",
+        "type": "image/png",
+        "sizes": "192x192"
+      },
+      {
+        "src": "https://via.placeholder.com/512.png?text=Icon",
+        "type": "image/png",
+        "sizes": "512x512"
+      }
+    ],
+    "start_url": ".",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#ffffff"
+  }' />
+
+  <!-- Embedded CSS -->
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+    }
+    body {
+      background: #f9f9f9;
+      color: #333;
+    }
+    header {
+      background: #005f99;
+      color: #fff;
+      padding: 1rem;
+      text-align: center;
+      font-size: 1.2rem;
+    }
+    main {
+      padding: 1rem;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    h2 {
+      margin: 1rem 0 0.5rem;
+    }
+    .progress-container {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .progress-bar {
+      position: relative;
+      background: #ddd;
+      border-radius: 10px;
+      height: 20px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      background: #005f99;
+      height: 100%;
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+    .macro-label {
+      font-size: 0.8rem;
+      margin-bottom: 0.25rem;
+      display: flex;
+      justify-content: space-between;
+    }
+    .add-section {
+      background: #fff;
+      padding: 1rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .add-section form {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    .add-section label {
+      font-size: 0.9rem;
+      margin-top: 0.5rem;
+    }
+    .add-section input, .add-section select {
+      padding: 0.5rem;
+      font-size: 0.9rem;
+    }
+    .button {
+      background: #005f99;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 0.6rem 1rem;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    .button:hover {
+      background: #003f66;
+    }
+    .meals-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .meals-list li {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #fff;
+      margin-bottom: 0.5rem;
+      padding: 0.5rem;
+      border-radius: 6px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
+    .meal-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+    .footer-note {
+      text-align: center;
+      color: #777;
+      font-size: 0.8rem;
+      margin-top: 2rem;
+    }
+    .week-container {
+      display: flex;
+      justify-content: space-between;
+      gap: 5px;
+    }
+    .week-day {
+      flex: 1;
+      text-align: center;
+      padding: 5px;
+      border-radius: 5px;
+      font-size: 0.8rem;
+      background: #f1f1f1;
+      color: #333;
+    }
+    .week-day.today {
+      background: #005f99;
+      color: white;
+      font-weight: bold;
+    }
+
+  </style>
+</head>
+<body>
+  <header>Daily Macro Tracker</header>
+
+  <main>
+    <!-- Progress Bars -->
+    <section class="progress-container">
+      <div class="macro-label">
+        <span>Calories</span>
+        <span id="caloriesLabel">0 / 3110</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="caloriesBar"></div>
+      </div>
+
+      <div class="macro-label">
+        <span>Protein (g)</span>
+        <span id="proteinLabel">0 / 220</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="proteinBar"></div>
+      </div>
+
+      <div class="macro-label">
+        <span>Carbs (g)</span>
+        <span id="carbsLabel">0 / 400</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="carbsBar"></div>
+      </div>
+
+      <div class="macro-label">
+        <span>Fats (g)</span>
+        <span id="fatsLabel">0 / 70</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="fatsBar"></div>
+      </div>
+    </section>
+
+    <section class="add-section">
+      <h2>Add Custom Snack</h2>
+      <form id="snackForm">
+        <label for="snackName">Snack Name:</label>
+        <input type="text" id="snackName" placeholder="e.g., Protein Bar" />
+    
+        <label for="snackProtein">Protein (g):</label>
+        <input type="number" id="snackProtein" placeholder="e.g., 10" min="0" />
+    
+        <label for="snackCarbs">Carbs (g):</label>
+        <input type="number" id="snackCarbs" placeholder="e.g., 15" min="0" />
+    
+        <label for="snackFats">Fats (g):</label>
+        <input type="number" id="snackFats" placeholder="e.g., 5" min="0" />
+    
+        <button type="submit" class="button">Add Snack</button>
+      </form>
+    </section>
+    
+
+    <!-- Save & Use Meals -->
+    <section class="add-section">
+      <h2>Save a Meal</h2>
+      <form id="saveMealForm">
+        <label for="mealName">Meal Name:</label>
+        <input type="text" id="mealName" placeholder="e.g., Chicken Lunch" />
+        
+        <label for="mealProtein">Protein (g):</label>
+        <input type="number" id="mealProtein" placeholder="e.g., 30" min="0" />
+
+        <label for="mealCarbs">Carbs (g):</label>
+        <input type="number" id="mealCarbs" placeholder="e.g., 45" min="0" />
+
+        <label for="mealFats">Fats (g):</label>
+        <input type="number" id="mealFats" placeholder="e.g., 10" min="0" />
+
+        <label for="mealServings">Total Servings:</label>
+        <input type="number" id="mealServings" placeholder="e.g., 4" min="1" value="1" />
+
+        <button type="submit" class="button">Save Meal</button>
+      </form>
+    </section>
+
+    <section class="add-section">
+      <h2>My Saved Meals</h2>
+      <ul class="meals-list" id="savedMealsList">
+        <!-- Dynamically populated -->
+      </ul>
+    </section>
+
+    <section class="add-section">
+      <h2>Protein Calculator</h2>
+        <form id="proteinCalculator">
+          <label for="proteinSelect">Protein Type:</label>
+          <select id="proteinSelect"></select>
+      
+          <label for="proteinAmount">Amount:</label>
+          <input type="number" id="proteinAmount" placeholder="Enter amount" min="0" />
+      
+          <label for="proteinUnit">Unit:</label>
+          <select id="proteinUnit">
+            <option value="g">Grams (g)</option>
+            <option value="oz">Ounces (oz)</option>
+            <option value="lbs">Pounds (lbs)</option>
+          </select>
+      
+          <button type="button" class="button" id="calculateMacros">Calculate</button>
+        </form>
+      
+        <h3>Calculated Macros</h3>
+        <div id="proteinMacros">
+          <p>Calories: <span id="calcCalories">0</span></p>
+          <p>Protein: <span id="calcProtein">0</span>g</p>
+          <p>Carbs: <span id="calcCarbs">0</span>g</p>
+          <p>Fats: <span id="calcFats">0</span>g</p>
+        </div>
+      </section>
+      
+      <section class="add-section">
+        <h2>Past Week Summary</h2>
+        <div id="weekSummary" class="week-container"></div>
+      </section>
+      
+      <section class="add-section">
+        <h2>Last 10 Meals</h2>
+        <ul class="meals-list" id="mealHistoryList">
+          <!-- Dynamically populated -->
+        </ul>
+      </section>
+      
+      <div class="footer-note">
+        <p>App resets daily at 4 AM EST. Data is stored locally in your browser.</p>
+      </div>
+    </main>
+
+  <!-- Service Worker & Main JS -->
+  <script>
+    /********************************************************
+     * SERVICE WORKER REGISTRATION
+     ********************************************************/
+    if ('serviceWorker' in navigator) {
+      // Dynamically create a service worker script from a Blob
+      const swScript = `
+        const CACHE_NAME = 'macro-tracker-cache-v1';
+        const OFFLINE_URL = '/';
+
+        self.addEventListener('install', event => {
+          event.waitUntil(
+            caches.open(CACHE_NAME).then(cache => {
+              // Cache the root (this HTML) for offline
+              return cache.addAll(['./']);
+            })
+          );
+        });
+
+        self.addEventListener('activate', event => {
+          event.waitUntil(
+            caches.keys().then(keyList => {
+              return Promise.all(keyList.map(key => {
+                if(key !== CACHE_NAME) {
+                  return caches.delete(key);
+                }
+              }));
+            })
+          );
+        });
+
+        self.addEventListener('fetch', event => {
+          event.respondWith(
+            caches.match(event.request).then(response => {
+              return response || fetch(event.request);
+            })
+          );
+        });
+      `;
+      const blob = new Blob([swScript], { type: 'text/javascript' });
+      const swURL = URL.createObjectURL(blob);
+
+      navigator.serviceWorker.register(swURL).then(() => {
+        console.log('Service Worker registered');
+      }).catch(err => {
+        console.log('Service Worker registration failed:', err);
+      });
+    }
+
+    /********************************************************
+     * DATA & GLOBALS
+     ********************************************************/
+    // Daily goals
+    let dailyGoals = {
+      calories: 3110,
+      protein: 220,
+      carbs: 400,
+      fats: 70
+    };
+
+    // Simplified protein database (macros per 100g):
+    // (Protein, Carbs, Fats, derived Calories)
+    const proteinDatabase = [
+      { name: 'Chicken Breast', protein: 31, carbs: 0, fats: 3.6 },
+      { name: 'Chicken Thigh', protein: 24, carbs: 0, fats: 9 },
+      { name: 'Ground Beef (80/20)', protein: 25, carbs: 0, fats: 20 },
+      { name: 'Ground Beef (90/10)', protein: 27, carbs: 0, fats: 10 },
+      { name: 'Ground Sausage', protein: 18, carbs: 0, fats: 30 },
+      { name: 'Pork Chops', protein: 26, carbs: 0, fats: 10 },
+      { name: 'Salmon', protein: 25, carbs: 0, fats: 14 }
+    ];
+
+
+    // Current macros
+    let currentMacros = {
+      calories: 0,
+      protein: 0,
+      carbs: 0,
+      fats: 0
+    };
+
+    // List of saved meals
+    // Each meal: { name, protein, carbs, fats, calories }
+    let savedMeals = [];
+
+    // Local Storage keys
+    const STORAGE_KEY_MACROS     = 'macroTracker_currentMacros';
+    const STORAGE_KEY_MEALS      = 'macroTracker_savedMeals';
+    const STORAGE_KEY_LAST_RESET = 'macroTracker_lastReset';
+    const STORAGE_KEY_HISTORY = 'macroTracker_weeklyHistory';
+
+    /********************************************************
+     * INITIALIZATION
+     ********************************************************/
+    window.addEventListener('load', () => {
+      initProteinSelect();
+      loadDataFromLocalStorage();
+      dailyResetCheck();
+      updateUI();
+      initEventListeners();
+    });
+
+    function initProteinSelect() {
+      const proteinSelect = document.getElementById('proteinSelect');
+      proteinDatabase.forEach(item => {
+        const opt = document.createElement('option');
+        opt.value = item.name;
+        opt.textContent = item.name;
+        proteinSelect.appendChild(opt);
+      });
+    }
+
+
+    function loadDataFromLocalStorage() {
+      const storedMacros = localStorage.getItem(STORAGE_KEY_MACROS);
+      const storedMeals  = localStorage.getItem(STORAGE_KEY_MEALS);
+
+      if (storedMacros) currentMacros = JSON.parse(storedMacros);
+      if (storedMeals)  savedMeals   = JSON.parse(storedMeals);
+    }
+
+    // Check if we need to reset data based on 4 AM EST
+    function dailyResetCheck() {
+      const lastResetStr = localStorage.getItem(STORAGE_KEY_LAST_RESET);
+      const nowEST = getESTTime();
+      const currentDay = nowEST.toISOString().split('T')[0]; // YYYY-MM-DD
+
+      if (!lastResetStr) {
+        // No prior reset, set one now
+        setLastReset(currentDay);
+      } else {
+        const [lastResetDay, lastResetHour] = lastResetStr.split('|');
+        if (currentDay !== lastResetDay) {
+          // We have a new day. If it's past 4 AM in EST, reset
+          if (nowEST.getHours() >= 4) {
+            resetDailyMacros();
+            setLastReset(currentDay);
+          }
+        } else {
+          // Same day, but check hour crossing 4 AM
+          const hourNum = parseInt(lastResetHour || '0', 10);
+          if (hourNum < 4 && nowEST.getHours() >= 4) {
+            resetDailyMacros();
+            setLastReset(currentDay);
+          }
+        }
+      }
+    }
+
+    function setLastReset(currentDay) {
+      const nowEST = getESTTime();
+      localStorage.setItem(STORAGE_KEY_LAST_RESET, `${currentDay}|${nowEST.getHours()}`);
+    }
+
+    // Convert local time -> EST (naive approach, ignoring DST complexities)
+    function getESTTime() {
+      const now = new Date();
+      const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+      const offset = 5; // hours behind UTC (ignores DST)
+      return new Date(utc - (3600000 * offset));
+    }
+
+    /********************************************************
+     * RESET
+     ********************************************************/
+     function resetDailyMacros() {
+      // Get today's date as YYYY-MM-DD
+      const today = getESTTime().toISOString().split('T')[0];
+
+      // Load history or initialize empty
+      let history = JSON.parse(localStorage.getItem(STORAGE_KEY_HISTORY)) || {};
+
+      // Store yesterday's macros before resetting
+      history[today] = { ...currentMacros };
+
+      // Keep only the last 7 days
+      const allDates = Object.keys(history).sort().slice(-7);
+      let trimmedHistory = {};
+      allDates.forEach(date => trimmedHistory[date] = history[date]);
+
+      // Save updated history
+      localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(trimmedHistory));
+
+      // Reset macros
+      currentMacros = { calories: 0, protein: 0, carbs: 0, fats: 0 };
+      saveCurrentMacros();
+      updateUI();
+    }
+
+
+    /********************************************************
+     * EVENT LISTENERS
+     ********************************************************/
+    function initEventListeners() {
+      // Add protein
+      document.getElementById('calculateMacros').addEventListener('click', () => {
+        const proteinType = document.getElementById('proteinSelect').value;
+        let amount = parseFloat(document.getElementById('proteinAmount').value) || 0;
+        const unit = document.getElementById('proteinUnit').value;
+
+        if (amount <= 0) {
+          alert('Please enter a valid amount.');
+          return;
+        }
+
+        // Convert to grams if needed
+        if (unit === 'lbs') {
+          amount *= 453.592; // 1 lb = 453.592g
+        } else if (unit === 'oz') {
+          amount *= 28.3495; // 1 oz = 28.3495g
+        }
+
+        // Find the selected protein data
+        const proteinItem = proteinDatabase.find(item => item.name === proteinType);
+        if (!proteinItem) return;
+
+        // Calculate macros
+        const ratio = amount / 100;
+        const protein = (proteinItem.protein * ratio).toFixed(1);
+        const carbs = (proteinItem.carbs * ratio).toFixed(1);
+        const fats = (proteinItem.fats * ratio).toFixed(1);
+        const calories = ((protein * 4) + (carbs * 4) + (fats * 9)).toFixed(1);
+
+        // Display results
+        document.getElementById('calcCalories').textContent = calories;
+        document.getElementById('calcProtein').textContent = protein;
+        document.getElementById('calcCarbs').textContent = carbs;
+        document.getElementById('calcFats').textContent = fats;
+      });
+
+
+      // Add snack
+      document.getElementById('snackForm').addEventListener('submit', e => {
+        e.preventDefault();
+        addSnackFromForm();
+      });
+
+      // Save meal
+      document.getElementById('saveMealForm').addEventListener('submit', e => {
+        e.preventDefault();
+        saveMealFromForm();
+      });
+    }
+
+    function addProteinFromForm() {
+      const proteinType = document.getElementById('proteinSelect').value;
+      const weight = parseFloat(document.getElementById('proteinWeight').value) || 0;
+      if (weight <= 0) return;
+
+      // Find the protein item
+      const proteinItem = proteinDatabase.find(item => item.name === proteinType);
+      if (proteinItem) {
+        // ratio = weight / 100
+        const ratio = weight / 100.0;
+        const p = proteinItem.protein * ratio;
+        const c = proteinItem.carbs * ratio;
+        const f = proteinItem.fats * ratio;
+        const cal = (p * 4) + (c * 4) + (f * 9);
+
+        addToCurrentMacros({ protein: p, carbs: c, fats: f, calories: cal });
+      }
+
+      // Clear form
+      document.getElementById('proteinWeight').value = '';
+    }
+
+    function addSnackFromForm() {
+      const snackName = document.getElementById('snackName').value.trim() || "Unnamed Snack";
+      const p = parseFloat(document.getElementById('snackProtein').value) || 0;
+      const c = parseFloat(document.getElementById('snackCarbs').value) || 0;
+      const f = parseFloat(document.getElementById('snackFats').value) || 0;
+      const cal = (p * 4) + (c * 4) + (f * 9);
+
+      const newSnack = { name: snackName, protein: p, carbs: c, fats: f, calories: cal };
+
+      addToCurrentMacros(newSnack);
+      saveToHistory(newSnack);
+
+      // Clear form
+      document.getElementById('snackName').value = '';
+      document.getElementById('snackProtein').value = '';
+      document.getElementById('snackCarbs').value = '';
+      document.getElementById('snackFats').value = '';
+    }
+
+
+    function addToCurrentMacros({ protein, carbs, fats, calories }) {
+      currentMacros.protein += protein;
+      currentMacros.carbs   += carbs;
+      currentMacros.fats    += fats;
+      currentMacros.calories += calories;
+      saveCurrentMacros();
+      updateUI();
+    }
+
+    function saveCurrentMacros() {
+      localStorage.setItem(STORAGE_KEY_MACROS, JSON.stringify(currentMacros));
+    }
+
+    /********************************************************
+     * SAVE & USE MEALS
+     ********************************************************/
+     function saveMealFromForm() {
+      const mealName = document.getElementById('mealName').value.trim();
+      const mealProtein = parseFloat(document.getElementById('mealProtein').value) || 0;
+      const mealCarbs = parseFloat(document.getElementById('mealCarbs').value) || 0;
+      const mealFats = parseFloat(document.getElementById('mealFats').value) || 0;
+      const totalServings = parseFloat(document.getElementById('mealServings').value) || 1;
+
+      if (!mealName || totalServings <= 0) return;
+
+      // Calculate per-serving macros
+      const mealCals = (mealProtein * 4 + mealCarbs * 4 + mealFats * 9) / totalServings;
+      const perServingProtein = mealProtein / totalServings;
+      const perServingCarbs = mealCarbs / totalServings;
+      const perServingFats = mealFats / totalServings;
+
+      const newMeal = {
+        name: mealName,
+        protein: perServingProtein,
+        carbs: perServingCarbs,
+        fats: perServingFats,
+        calories: mealCals,
+        servings: totalServings
+      };
+
+      savedMeals.push(newMeal);
+      localStorage.setItem(STORAGE_KEY_MEALS, JSON.stringify(savedMeals));
+
+      // Also save the first meal entry to history
+      saveToHistory(newMeal);
+
+      // Clear form
+      document.getElementById('mealName').value = '';
+      document.getElementById('mealProtein').value = '';
+      document.getElementById('mealCarbs').value = '';
+      document.getElementById('mealFats').value = '';
+      document.getElementById('mealServings').value = '1';
+
+      renderSavedMeals();
+    }
+
+      function promptMealServings(index) {
+        const meal = savedMeals[index];
+        const servingsEaten = parseFloat(prompt(`How many servings of "${meal.name}" did you eat?`, "1")) || 0;
+
+        if (servingsEaten > 0) {
+          const mealToAdd = {
+            name: meal.name,
+            protein: meal.protein * servingsEaten,
+            carbs: meal.carbs * servingsEaten,
+            fats: meal.fats * servingsEaten,
+            calories: meal.calories * servingsEaten
+          };
+
+          addToCurrentMacros(mealToAdd);
+          saveToHistory(mealToAdd);  // Now also saves the meal in history
+        }
+      }
+
+
+      function renderSavedMeals() {
+        const list = document.getElementById('savedMealsList');
+        list.innerHTML = '';
+
+        savedMeals.forEach((meal, index) => {
+          const li = document.createElement('li');
+          li.innerHTML = `
+            <span>
+              <strong>${meal.name}</strong> (${meal.servings} servings total)<br>
+              <span style="color: gray;">
+                Per Serving: Protein: ${Math.round(meal.protein)}g, 
+                Carbs: ${Math.round(meal.carbs)}g, 
+                Fat: ${Math.round(meal.fats)}g
+              </span>
+            </span>
+            <div class="meal-actions">
+              <button class="button" style="font-size:0.8rem;" data-add>+ Add</button>
+              <button class="button" style="font-size:0.8rem; background:#c33;" data-delete>Delete</button>
+            </div>
+          `;
+
+          // "Add" button
+          const addBtn = li.querySelector('[data-add]');
+          addBtn.addEventListener('click', () => {
+            promptMealServings(index);
+          });
+
+          // "Delete" button
+          const delBtn = li.querySelector('[data-delete]');
+          delBtn.addEventListener('click', () => {
+            deleteMeal(index);
+          });
+
+          list.appendChild(li);
+        });
+      }
+
+
+    function deleteMeal(idx) {
+      const mealName = savedMeals[idx].name;
+      if (confirm(`Are you sure you want to delete "${mealName}"?`)) {
+        // Remove from array
+        savedMeals.splice(idx, 1);
+        // Update local storage
+        localStorage.setItem(STORAGE_KEY_MEALS, JSON.stringify(savedMeals));
+        // Re-render
+        renderSavedMeals();
+      }
+    }
+
+    /********************************************************
+     * UPDATE UI
+     ********************************************************/
+    function updateUI() {
+      // Update numeric labels
+      const { calories, protein, carbs, fats } = currentMacros;
+
+      document.getElementById('caloriesLabel').textContent = 
+        `${Math.round(calories)} / ${dailyGoals.calories}`;
+      document.getElementById('proteinLabel').textContent  = 
+        `${Math.round(protein)} / ${dailyGoals.protein}`;
+      document.getElementById('carbsLabel').textContent    = 
+        `${Math.round(carbs)} / ${dailyGoals.carbs}`;
+      document.getElementById('fatsLabel').textContent     = 
+        `${Math.round(fats)} / ${dailyGoals.fats}`;
+
+      // Update progress bars
+      document.getElementById('caloriesBar').style.width = 
+        `${(calories / dailyGoals.calories) * 100}%`;
+      document.getElementById('proteinBar').style.width  = 
+        `${(protein  / dailyGoals.protein)  * 100}%`;
+      document.getElementById('carbsBar').style.width    = 
+        `${(carbs    / dailyGoals.carbs)    * 100}%`;
+      document.getElementById('fatsBar').style.width     = 
+        `${(fats     / dailyGoals.fats)     * 100}%`;
+
+      // Re-render saved meals
+      renderSavedMeals();
+
+      // Render weekyl summary
+      renderWeekSummary();
+    }
+    function renderWeekSummary() {
+      const container = document.getElementById('weekSummary');
+      container.innerHTML = '';
+
+      const history = JSON.parse(localStorage.getItem(STORAGE_KEY_HISTORY)) || {};
+      const todayStr = getESTTime().toISOString().split('T')[0];
+      const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+      let now = getESTTime();
+      let days = [];
+
+      // Get last 7 days (Sunday - Saturday)
+      for (let i = 6; i >= 0; i--) {
+        let day = new Date(now);
+        day.setDate(now.getDate() - i);
+        let dateStr = day.toISOString().split('T')[0];
+        let dayName = weekdays[day.getDay()];
+        days.push({ dateStr, dayName });
+      }
+
+      days.forEach(({ dateStr, dayName }) => {
+        const macros = history[dateStr] || { calories: 0, protein: 0, carbs: 0, fats: 0 };
+
+        const div = document.createElement('div');
+        div.className = 'week-day';
+        if (dateStr === todayStr) div.classList.add('today');
+
+        div.innerHTML = `
+          <strong>${dayName}</strong><br>
+          <span style="font-size: 0.7rem; color: gray;">
+            Cals: ${macros.calories}, Protein: ${macros.protein}g, 
+            Carbs: ${macros.carbs}g, Fat: ${macros.fats}g
+          </span>
+        `;
+
+        container.appendChild(div);
+      });
+    }
+
+    const STORAGE_KEY_HISTORY_MEALS = 'macroTracker_mealHistory';
+    let mealHistory = JSON.parse(localStorage.getItem(STORAGE_KEY_HISTORY_MEALS)) || [];
+
+    // Function to add a meal/snack to history
+    function saveToHistory(meal) {
+      mealHistory.unshift(meal); // Add new meal to the start
+      if (mealHistory.length > 10) mealHistory.pop(); // Keep last 10 entries
+
+      localStorage.setItem(STORAGE_KEY_HISTORY_MEALS, JSON.stringify(mealHistory));
+      renderMealHistory();
+    }
+
+    // Function to render last 10 meals/snacks
+    function renderMealHistory() {
+      const list = document.getElementById('mealHistoryList');
+      list.innerHTML = '';
+
+      mealHistory.forEach((meal, index) => {
+        const li = document.createElement('li');
+        li.innerHTML = `
+          <span>
+            <strong>${meal.name}</strong><br>
+            <span style="color: gray;">
+              Protein: ${Math.round(meal.protein)}g, 
+              Carbs: ${Math.round(meal.carbs)}g, 
+              Fat: ${Math.round(meal.fats)}g
+            </span>
+          </span>
+          <div class="meal-actions">
+            <button class="button" style="font-size:0.8rem;" data-edit>Edit</button>
+            <button class="button" style="font-size:0.8rem; background:#c33;" data-delete>Remove</button>
+          </div>
+        `;
+
+        // "Edit" button
+        li.querySelector('[data-edit]').addEventListener('click', () => {
+          editMealHistory(index);
+        });
+
+        // "Remove" button
+        li.querySelector('[data-delete]').addEventListener('click', () => {
+          removeMealHistory(index);
+        });
+
+        list.appendChild(li);
+      });
+    }
+
+    // Edit meal in history
+    function editMealHistory(index) {
+      const meal = mealHistory[index];
+      const newName = prompt(`Edit meal name (${meal.name}):`, meal.name);
+      if (newName !== null && newName.trim() !== "") {
+        mealHistory[index].name = newName.trim();
+        localStorage.setItem(STORAGE_KEY_HISTORY_MEALS, JSON.stringify(mealHistory));
+        renderMealHistory();
+      }
+    }
+
+    // Remove meal from history
+    function removeMealHistory(index) {
+      if (confirm(`Are you sure you want to remove "${mealHistory[index].name}"?`)) {
+        mealHistory.splice(index, 1);
+        localStorage.setItem(STORAGE_KEY_HISTORY_MEALS, JSON.stringify(mealHistory));
+        renderMealHistory();
+      }
+    }
+
+    // Call render function on page load
+    window.addEventListener('load', renderMealHistory);
+
+  </script>
+</body>
+</html>
